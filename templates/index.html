@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ORC Knots Predictor</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <div class="container">
+    <h1>ORC Knots Predictor</h1>
+    <p class="justify">Predict boat performance (knots) from inputs. You can upload a CSV or enter one boat manually. The template is built from ESP_ORC.csv using the boat named HISTOLAB.</p>
+
+    <section class="card">
+      <h2>Download CSV Template</h2>
+      <p class="justify">The template contains exactly the required input columns and one example row sourced from ESP_ORC.csv for the boat named HISTOLAB (case-insensitive match).</p>
+      <a class="btn" href="{{ url_for('download_template') }}">Download template.csv</a>
+    </section>
+
+    <div class="grid">
+      <section class="card">
+        <h2>CSV Upload (multiple or single boat)</h2>
+        <form action="{{ url_for('predict') }}" method="post" enctype="multipart/form-data">
+          <div class="field">
+            <label for="csv_file">Upload CSV</label>
+            <input type="file" id="csv_file" name="csv_file" accept=".csv" required />
+          </div>
+          <p class="muted">CSV must contain these columns exactly: {{ feature_cols }}</p>
+          <button class="btn" type="submit">Predict (CSV)</button>
+          <p class="muted">If your CSV has one row, the knots table will display below. If multiple rows, a predictions_knots.csv will download.</p>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Manual Input (single boat)</h2>
+        <form action="{{ url_for('predict') }}" method="post">
+          <div class="field">
+            <label for="D">D (C/S/R)</label>
+            <select id="D" name="D" required>
+              <option value="C">C</option>
+              <option value="S">S</option>
+              <option value="R">R</option>
+            </select>
+            <small class="muted">{{ feature_desc['D'] }}</small>
+          </div>
+          {% for col in feature_cols %}
+            {% if col != 'D' %}
+            <div class="field">
+              <label for="{{ col }}">{{ col }}</label>
+              <input type="number" step="any" id="{{ col }}" name="{{ col }}" placeholder="{{ feature_desc[col] }}" />
+              <small class="muted">{{ feature_desc[col] }}</small>
+            </div>
+            {% endif %}
+          {% endfor %}
+          <button class="btn" type="submit">Predict (manual)</button>
+        </form>
+      </section>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash">
+          {% for m in messages %}
+            <div>{{ m }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% if show_results %}
+    <section class="card">
+      <h2>Prediction Results (manual)</h2>
+      <h3>Knots table (rows=TWA, cols=TWS)</h3>
+      {% if from_csv %}
+      <p class="muted">Source: CSV upload (single row)</p>
+      {% endif %}
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>TWA \ TWS</th>
+              {% for w in twss %}
+              <th>{{ w }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for i in range(twas|length) %}
+              <tr>
+                <th>{{ twas[i] }}</th>
+                {% for j in range(twss|length) %}
+                  <td>{{ knots_table[i][j] if knots_table and knots_table[i][j] is not none else '' }}</td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div>
+        <a class="btn" href="{{ url_for('export_csv') }}">Download export.csv</a>
+      </div>
+    </section>
+    {% endif %}
+  </div>
+</body>
+</html>
